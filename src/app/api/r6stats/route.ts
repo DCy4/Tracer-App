@@ -1,4 +1,8 @@
 import { NextResponse } from 'next/server';
+import { scrapeR6Stats } from '@/lib/puppeteer-r6';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // Use require for CJS module compatibility
 const r6apiModule = require('r6api.js');
@@ -51,67 +55,79 @@ export async function GET(request: Request) {
 
     console.log(`Fetching fresh data for ${cacheKey}`);
 
-    const playerNames = playersToFetch.map(p => p.name);
-    // Assuming all are on the same platform for simplicity in this iteration
-    const targetPlatform = playersToFetch[0].platform;
+    let combinedData;
 
-    const idResponse = await r6api.findByUsername(targetPlatform, playerNames);
+    // Try r6api.js first if credentials are present
+    if (process.env.UBI_EMAIL && process.env.UBI_PASSWORD) {
+      try {
+        const playerNames = playersToFetch.map(p => p.name);
+        const targetPlatform = playersToFetch[0].platform;
 
-    if (!idResponse || idResponse.length === 0) {
-      return NextResponse.json({ error: 'Players not found' }, { status: 404 });
+        const idResponse = await r6api.findByUsername(targetPlatform, playerNames);
+
+        if (idResponse && idResponse.length > 0) {
+          const ids = idResponse.map((p: any) => p.id);
+          const [statsResponse, rankResponse, progressionResponse] = await Promise.all([
+            r6api.getStats(targetPlatform, ids),
+            r6api.getRanks(targetPlatform, ids),
+            r6api.getProgression(targetPlatform, ids)
+          ]);
+
+          combinedData = ids.map((id: string) => {
+            const profile = idResponse.find((p: any) => p.id === id);
+            const playerStats = statsResponse[0] ? statsResponse[0][id] : (statsResponse[id] || {});
+            const playerRank = rankResponse[0] ? rankResponse[0][id] : (rankResponse[id] || {});
+            const playerProgression = progressionResponse[0] ? progressionResponse[0][id] : (progressionResponse[id] || {});
+
+            const pvp = playerStats.general?.pvp || {};
+            const kills = pvp.kills || 0;
+            const deaths = pvp.deaths || 1;
+            const wins = pvp.wins || 0;
+            const losses = pvp.losses || 1;
+            const timePlayedSeconds = pvp.playtime || 0;
+            const currentRank = playerRank.current || {};
+
+            return {
+              username: profile.username,
+              platform: profile.platform,
+              avatar: profile.avatar?.['256'] || null,
+              level: playerProgression.level || 0,
+              kd: (kills / deaths).toFixed(2),
+              wl: ((wins / (wins + losses)) * 100).toFixed(1),
+              rank: currentRank.name || 'Unranked',
+              mmr: currentRank.mmr || 0,
+              matches: wins + losses,
+              timePlayed: Math.round(timePlayedSeconds / 3600) + 'h',
+              headshotPct: 0
+            };
+          });
+        }
+      } catch (e: any) {
+        console.error('r6api.js failed, trying fallback...', e);
+        const fs = require('fs');
+        fs.appendFileSync('error_log.txt', `r6api.js Error: ${e.message}\n`);
+      }
+    } else {
+      const fs = require('fs');
+      fs.appendFileSync('error_log.txt', `Skipping r6api.js: No credentials\n`);
     }
 
-    // Extract IDs
-    const ids = idResponse.map((p: any) => p.id);
+    // If r6api.js failed or credentials missing, try Puppeteer
+    if (!combinedData && username) {
+      console.log('Attempting Puppeteer scrape...');
+      try {
+        const scrapedData = await scrapeR6Stats(username, platform);
+        combinedData = [scrapedData];
+      } catch (e: any) {
+        console.error('Puppeteer scrape failed', e);
+        const fs = require('fs');
+        fs.appendFileSync('error_log.txt', `Puppeteer Error: ${e.message}\n`);
+      }
+    }
 
-    // Fetch Data in parallel
-    const [statsResponse, rankResponse, progressionResponse] = await Promise.all([
-      r6api.getStats(targetPlatform, ids),
-      r6api.getRanks(targetPlatform, ids),
-      r6api.getProgression(targetPlatform, ids)
-    ]);
-
-    // Combine data
-    const combinedData = ids.map((id: string) => {
-      const profile = idResponse.find((p: any) => p.id === id);
-
-      // statsResponse is usually an object { [id]: { ... } } or array
-      // Based on r6api.js documentation, getStats returns an object keyed by ID
-      const playerStats = statsResponse[0] ? statsResponse[0][id] : (statsResponse[id] || {});
-
-      // rankResponse is usually { [id]: { ... } }
-      const playerRank = rankResponse[0] ? rankResponse[0][id] : (rankResponse[id] || {});
-
-      // progressionResponse is usually { [id]: { ... } }
-      const playerProgression = progressionResponse[0] ? progressionResponse[0][id] : (progressionResponse[id] || {});
-
-      // Flatten for frontend
-      // General stats (pvp)
-      const pvp = playerStats.general?.pvp || {};
-      const kills = pvp.kills || 0;
-      const deaths = pvp.deaths || 1; // avoid div by 0
-      const wins = pvp.wins || 0;
-      const losses = pvp.losses || 1;
-      const timePlayedSeconds = pvp.playtime || 0;
-
-      // Rank (current season)
-      // Structure might be { max: ..., current: ... }
-      const currentRank = playerRank.current || {};
-
-      return {
-        username: profile.username,
-        platform: profile.platform,
-        avatar: profile.avatar?.['256'] || null, // r6api.js often provides avatar URLs
-        level: playerProgression.level || 0,
-        kd: (kills / deaths).toFixed(2),
-        wl: ((wins / (wins + losses)) * 100).toFixed(1),
-        rank: currentRank.name || 'Unranked',
-        mmr: currentRank.mmr || 0,
-        matches: wins + losses,
-        timePlayed: Math.round(timePlayedSeconds / 3600) + 'h',
-        headshotPct: 0 // Need to find where headshots are, defaulting to 0
-      };
-    });
+    if (!combinedData) {
+      throw new Error('All fetch methods failed');
+    }
 
     // Update cache
     cache[cacheKey] = {
@@ -122,10 +138,23 @@ export async function GET(request: Request) {
     return NextResponse.json(combinedData);
 
   } catch (error: any) {
+    const fs = require('fs');
+    const logMessage = `
+    Time: ${new Date().toISOString()}
+    Error: ${error.message}
+    Stack: ${error.stack}
+    Env Email Present: ${!!process.env.UBI_EMAIL}
+    Env Password Present: ${!!process.env.UBI_PASSWORD}
+    ---------------------------------------------------
+    `;
+    try {
+      fs.appendFileSync('error_log.txt', logMessage);
+    } catch (e) {
+      console.error('Failed to write to error log', e);
+    }
+
     console.error('Error fetching R6 stats:', error);
 
-    // Fallback to mock data for demonstration if API fails (e.g. due to rate limits or auth issues)
-    // This ensures the UI doesn't break completely during development
     console.log('Falling back to mock data');
     const mockData = [{
       username: 'MockUser',
@@ -142,13 +171,5 @@ export async function GET(request: Request) {
     }];
 
     return NextResponse.json(mockData);
-
-    /* 
-    // Original error response
-    return NextResponse.json(
-      { error: 'Failed to fetch stats', details: error.message },
-      { status: 500 }
-    );
-    */
   }
 }

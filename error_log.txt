@@ -1,0 +1,26 @@
+
+    Time: 2025-11-30T21:28:58.328Z
+    Error: Forcing fallback to mock data
+    Stack: Error: Forcing fallback to mock data
+    at GET (C:\Users\david\Documents\Web Development\Tracer-App\.next\dev\server\chunks\[root-of-the-server]__04f3b2ca._.js:71:15)
+    at AsyncLocalStorage.run (node:internal/async_local_storage/async_context_frame:59:14)
+    at AppRouteRouteModule.do (C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37868)
+    at C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:47830
+    at C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\server\lib\trace\tracer.js:185:36
+    at NoopContextManager.with (C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
+    at ContextAPI.with (C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
+    at NoopTracer.startActiveSpan (C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
+    at ProxyTracer.startActiveSpan (C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854)
+    at C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\server\lib\trace\tracer.js:154:103
+    at NoopContextManager.with (C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
+    at ContextAPI.with (C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
+    at NextTracerImpl.trace (C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\server\lib\trace\tracer.js:154:28)
+    at C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:47669
+    at AsyncLocalStorage.run (node:internal/async_local_storage/async_context_frame:63:14)
+    at C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45164
+    at AsyncLocalStorage.run (node:internal/async_local_storage/async_context_frame:63:14)
+    at C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45121
+    at AsyncLocalStorage.run (node:internal/async_local_storage/async_context_frame:63:14)
+    at AppRouteRouteModule.handle (C:\Users\david\Documents\Web Development\Tracer-App\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45075)
+    ---------------------------------------------------
+    Skipping r6api.js: No credentials
