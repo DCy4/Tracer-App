@@ -22,13 +22,30 @@ export default function OverviewPage() {
   const [stats, setStats] = useState<typeof MOCK_STATS | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSearch = (username: string, platform: string) => {
+  const handleSearch = async (username: string, platform: string) => {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setStats({ ...MOCK_STATS, username }); // Use searched username
+    setStats(null);
+    try {
+      const response = await fetch(`/api/r6stats?username=${encodeURIComponent(username)}&platform=${encodeURIComponent(platform)}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch stats');
+      }
+
+      // API returns an array, take the first item
+      if (Array.isArray(data) && data.length > 0) {
+        setStats(data[0]);
+      } else {
+        throw new Error('Player not found');
+      }
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      // Ideally show an error message to the user
+      alert(error instanceof Error ? error.message : "An error occurred");
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
