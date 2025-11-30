@@ -27,11 +27,18 @@ Tracer is a modern, high-performance web application designed for Rainbow Six Si
     ```bash
     npm install
     ```
-3.  Run the development server:
+3.  **Configuration**:
+    Create a `.env.local` file in the root directory and add your Ubisoft credentials. This is required for the stats API to function.
+    ```env
+    UBI_EMAIL=your_email@example.com
+    UBI_PASSWORD=your_password
+    ```
+
+4.  Run the development server:
     ```bash
     npm run dev
     ```
-4.  Open [http://localhost:3000](http://localhost:3000) with your browser.
+5.  Open [http://localhost:3000](http://localhost:3000) with your browser.
 
 ## License
 
