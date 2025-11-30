@@ -9,7 +9,7 @@ We follow a simplified Feature Branch Workflow.
 
 ## Branches
 - `main`: Production-ready code.
-- `develop`: Integration branch for ongoing development.
+- `dev`: Integration branch for ongoing development.
 - `feature/*`: New features (e.g., `feature/hero-section`).
 - `fix/*`: Bug fixes.
 
